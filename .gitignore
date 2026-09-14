@@ -1,0 +1,21 @@
+# Dependencies and generated output
+node_modules/
+.expo/
+dist/
+build/
+coverage/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+
+# Local reference and scratch files
+Practical 2026.pdf
+tmp/
+.DS_Store
+Thumbs.db
