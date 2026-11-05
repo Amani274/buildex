@@ -1,0 +1,4 @@
+{
+  "folders": [{"path": "buildexchange"}, {"path": "docs"}],
+  "settings": {"python.defaultInterpreterPath": "${workspaceFolder:buildexchange}/.venv/Scripts/python.exe"}
+}

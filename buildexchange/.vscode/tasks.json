@@ -1,0 +1,1 @@
+{"version":"2.0.0","tasks":[{"label":"Django tests","type":"shell","command":".venv/Scripts/python.exe manage.py test exchange","group":{"kind":"test","isDefault":true}},{"label":"Migrate database","type":"shell","command":".venv/Scripts/python.exe manage.py migrate"}]}

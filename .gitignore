@@ -30,3 +30,11 @@ test-results/
 playwright-report/
 apps/mobile/dist/
 apps/mobile/.expo/
+
+# BuildExchange local runtime, private receipt evidence and virtual environments
+.venv/
+__pycache__/
+*.pyc
+*.sqlite3
+*.sqlite3-*
+private-media/
