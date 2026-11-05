@@ -1,0 +1,19 @@
+{
+  "name": "yebbo", "version": "0.1.0", "private": true, "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "server": "node --watch apps/server/src/index.ts",
+    "web": "vite --config apps/dashboard/vite.config.ts --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build --config apps/dashboard/vite.config.ts",
+    "start": "node apps/server/src/index.ts",
+    "test": "node --test apps/server/test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "mobile": "pnpm --dir apps/mobile start",
+    "present": "node scripts/present.mjs",
+    "present:fresh": "node scripts/present.mjs --fresh"
+  },
+  "engines": { "node": ">=24.0.0" },
+  "dependencies": {"express":"5.2.1", "react":"19.2.3", "react-dom":"19.2.3", "lucide-react":"1.49.0", "zod":"4.1.12"},
+  "devDependencies": {"@types/express":"5.0.3", "@types/node":"24.10.0", "@types/react":"19.2.2", "@types/react-dom":"19.2.2", "@vitejs/plugin-react":"6.1.1", "typescript":"5.9.3", "vite":"8.3.1"}
+}

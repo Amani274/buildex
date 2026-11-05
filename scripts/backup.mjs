@@ -1,0 +1,14 @@
+import {DatabaseSync,backup} from 'node:sqlite';
+import {mkdirSync,existsSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+if(existsSync('.env'))process.loadEnvFile('.env');
+const source=resolve(process.env.YEBBO_DB||'data/yebbo.sqlite');
+if(!existsSync(source))throw Error('Start Yebbo once before creating a backup.');
+const folder=resolve('data/backups');mkdirSync(folder,{recursive:true});
+const target=join(folder,'yebbo-'+new Date().toISOString().replaceAll(':','-')+'.sqlite');
+const db=new DatabaseSync(source,{readOnly:true});
+await backup(db,target);db.close();
+const check=new DatabaseSync(target,{readOnly:true});
+const result=check.prepare('PRAGMA integrity_check').get();check.close();
+if(result.integrity_check!=='ok')throw Error('Backup integrity check failed.');
+console.log('Verified backup saved to '+target);

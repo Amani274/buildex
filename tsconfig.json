@@ -1,0 +1,5 @@
+{
+ "compilerOptions": {"target":"ES2023","lib":["ES2023","DOM","DOM.Iterable"],"module":"ESNext","moduleResolution":"Bundler","jsx":"react-jsx","strict":true,"skipLibCheck":true,"noEmit":true,"allowImportingTsExtensions":true,"esModuleInterop":true,"resolveJsonModule":true,"types":["node","vite/client"]},
+ "include":["apps/dashboard/src","apps/dashboard/vite.config.ts","apps/server/src","packages/shared"],
+ "exclude":["node_modules","apps/mobile"]
+}

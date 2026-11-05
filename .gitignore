@@ -19,3 +19,14 @@ Practical 2026.pdf
 tmp/
 .DS_Store
 Thumbs.db
+
+# Local database, package caches and generated test artifacts
+data/
+.pnpm-store/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+test-results/
+playwright-report/
+apps/mobile/dist/
+apps/mobile/.expo/

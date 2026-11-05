@@ -1,0 +1,4 @@
+packages:
+  - apps/mobile
+minimumReleaseAgeExclude:
+  - lucide-react@1.49.0
