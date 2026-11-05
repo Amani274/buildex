@@ -1,0 +1,1 @@
+document.querySelectorAll('[data-demo]').forEach(button=>button.addEventListener('click',()=>{document.querySelector('[name=username]').value=button.dataset.demo;document.querySelector('[name=password]').value='BuildDemo2026!';document.querySelectorAll('[data-demo]').forEach(b=>b.classList.toggle('selected',b===button));document.querySelector('.signin button').focus();}));

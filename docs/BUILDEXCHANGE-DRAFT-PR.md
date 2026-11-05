@@ -1,3 +1,5 @@
+> Historical v1 document. The current operational prototype is described in [BUILDEXCHANGE-V2-GUIDE.md](BUILDEXCHANGE-V2-GUIDE.md), with current roles, bank simulation, fees, maps and validation.
+
 # Proposed draft PR: Add BuildExchange procurement, equipment rentals and site receipt demo
 
 Adds a self-contained Django/DRF application under `buildexchange/` for construction procurement and general equipment rentals. A purchaser can order from multiple suppliers; transporters record custody checkpoints; the assigned site supervisor reconciles quantities/conditions and signs a timestamped receipt with protected optional photo evidence. Arrival and payment records remain separate from receipt confirmation.

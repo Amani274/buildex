@@ -54,7 +54,7 @@ def listing_for_sale(pk):
 def order_scope(user):
     role(user, 'purchaser', 'supplier', 'supervisor', 'transporter', 'admin')
     if user.profile.role == 'admin':
-        return Order.objects.all()
+        return Order.objects.filter(support_tickets__isnull=False).distinct()
     return Order.objects.filter(Q(purchaser=user) | Q(supplier=user) | Q(supervisor=user) | Q(delivery__transporter=user)).distinct()
 
 def get_order(user, pk):
@@ -78,23 +78,32 @@ def add_cart(user, data):
         CartItem.objects.filter(purchaser=user, listing=item).delete()
     return {'message': 'Cart updated.'}
 
-def reserve_order(user, supplier, supervisor, site, items, quote=None):
+def reserve_order(user, supplier, supervisor, site, items, quote=None, destination=None):
+    from .operations import fee_quote
     order = Order.objects.create(purchaser=user, supplier=supplier, supervisor_id=supervisor, site=site, quote=quote)
     for listing, qty, price in items:
         changed = Listing.objects.filter(pk=listing.pk, stock__gte=qty).update(stock=F('stock')-qty)
         ensure(changed == 1, 'Stock changed. Refresh and try again.')
         OrderLine.objects.create(order=order, listing=listing, name=listing.name, quantity=qty,
                                  unit=listing.unit, unit_price_ngwee=price)
+    dest = destination or (-15.4067,28.2871)
+    for key,value in fee_quote(supplier,items,dest).items():
+        setattr(order,key,value)
+    order.site_latitude,order.site_longitude=dest
+    order.location_source='map-pin' if destination else 'demo-default'
+    order.save()
     audit(user, f'order:{order.pk}', 'order_placed', total_ngwee=order.total_ngwee, quote_id=quote.pk if quote else None)
     return order
 
 def checkout(user, data):
+    from .operations import coordinates
     role(user, 'purchaser')
     key = text(data.get('key'), 'Request key', 80)
     ensure(len(key) >= 10, 'Request key must contain at least 10 characters.')
     site = text(data.get('site'), 'Site / delivery instructions', 240)
     supervisor = supervisor_id(integer(data.get('supervisor'), 'Supervisor'))
-    fingerprint = hashlib.sha256(json.dumps({'site': site, 'supervisor': supervisor}, sort_keys=True).encode()).hexdigest()
+    destination=coordinates(data)
+    fingerprint = hashlib.sha256(json.dumps({'site': site, 'supervisor': supervisor,'destination':destination}, sort_keys=True).encode()).hexdigest()
     # Serialize checkouts for this purchaser, then lock products in stable ID order.
     User.objects.select_for_update().get(pk=user.pk)
     prior = Checkout.objects.filter(purchaser=user, key=key).first()
@@ -108,7 +117,7 @@ def checkout(user, data):
         listing = listing_for_sale(line.listing_id)
         ensure(listing.stock >= line.quantity, f'Insufficient stock: {listing.name}.')
         groups[listing.supplier_id].append((listing, line.quantity, listing.price_ngwee))
-    ids = [reserve_order(user, User.objects.get(pk=supplier), supervisor, site, items).pk for supplier, items in groups.items()]
+    ids = [reserve_order(user, User.objects.get(pk=supplier), supervisor, site, items,destination=destination).pk for supplier, items in groups.items()]
     Checkout.objects.create(purchaser=user, key=key, fingerprint=fingerprint, order_ids=ids)
     CartItem.objects.filter(purchaser=user).delete()
     return {'order_ids': ids}
@@ -122,6 +131,7 @@ def request_quote(user, data):
     return {'quote_id': q.pk}
 
 def quote_action(user, data):
+    from .operations import coordinates
     role(user, 'purchaser', 'supplier')
     ensure(data.get('operation') in ['reply', 'accept'], 'Choose reply or accept.')
     try:
@@ -141,7 +151,7 @@ def quote_action(user, data):
         ensure(q.state == 'OFFERED', 'Supplier must offer a price first.')
         listing = listing_for_sale(q.listing_id)
         order = reserve_order(user, listing.supplier, supervisor_id(integer(data.get('supervisor'), 'Supervisor')),
-                              text(data.get('site'), 'Site', 240), [(listing, q.quantity, q.unit_price_ngwee)], q)
+                              text(data.get('site'), 'Site', 240), [(listing, q.quantity, q.unit_price_ngwee)], q,coordinates(data))
         q.state = 'ACCEPTED'
         q.save()
         audit(user, f'quote:{q.pk}', 'quote_accepted', order_id=order.pk)
@@ -160,11 +170,12 @@ def supplier_order(user, data):
         reason = text(data.get('notes'), 'Reason')
         for line in order.lines.order_by('listing_id'):
             Listing.objects.filter(pk=line.listing_id).update(stock=F('stock')+line.quantity)
-        if order.payment_status == 'RECORDED_MANUAL':
+        if order.payment_status in ['RECORDED_MANUAL','PAID_DEMO']:
             order.payment_status = 'REFUND_PENDING'
         audit(user, f'order:{order.pk}', 'order_rejected', reason=reason)
     else:
         ensure({'PLACED': 'ACCEPTED', 'ACCEPTED': 'READY'}.get(order.state) == operation, 'Invalid order transition.')
+        ensure(order.payment_status in ['PAID_DEMO','RECORDED_MANUAL'],'The purchaser must complete the simulated payment before preparation.')
         if operation == 'READY':
             Delivery.objects.create(order=order)
         audit(user, f'order:{order.pk}', 'supplier_status', state=operation)
@@ -333,12 +344,12 @@ def rental_action(user, data):
         raise NotFound('Rental not found.')
     op = data.get('operation')
     if op == 'deposit':
-        role(user, 'admin')
+        role(user, 'system-owner')
         ensure(rental.state == 'BOOKED' and rental.deposit_status == 'PENDING', 'No pending deposit exists.')
         rental.deposit_reference = text(data.get('reference'), 'Manual deposit reference', 120)
         rental.deposit_status = 'RECORDED_MANUAL'
     elif op == 'refund':
-        role(user, 'admin')
+        role(user, 'system-owner')
         ensure(rental.deposit_status == 'REFUND_PENDING', 'No deposit refund is pending.')
         rental.deposit_reference = text(data.get('reference'), 'Manual refund reference', 120)
         rental.deposit_status = 'REFUNDED_MANUAL'
@@ -347,11 +358,21 @@ def rental_action(user, data):
         rental.state = 'CANCELLED'
         if rental.deposit_status == 'RECORDED_MANUAL':
             rental.deposit_status = 'REFUND_PENDING'
+        if rental.deposit_status == 'PAID_DEMO':
+            from .operations import refund_demo
+            refund_demo(rental=rental)
+            rental.deposit_status = 'REFUNDED_DEMO'
+            rental.payment_status='REFUNDED_DEMO'
+        elif rental.payment_status=='PAID_DEMO':
+            from .operations import refund_demo
+            refund_demo(rental=rental)
+            rental.payment_status='REFUNDED_DEMO'
     else:
         role(user, 'supplier')
         ensure(rental.listing.supplier_id == user.pk, 'Only the equipment supplier can record collection or return.')
         if op == 'collect':
-            ensure(rental.state == 'BOOKED' and rental.deposit_status in ['RECORDED_MANUAL', 'NOT_REQUIRED'], 'Record any deposit before collection.')
+            ensure(rental.state == 'BOOKED' and rental.deposit_status in ['RECORDED_MANUAL', 'PAID_DEMO', 'NOT_REQUIRED'], 'Complete the simulated deposit before collection.')
+            ensure(rental.payment_status=='PAID_DEMO','Complete the rental payment before collection.')
             ensure(rental.starts_at <= timezone.now() < rental.ends_at, 'Collection is allowed within the booked time range.')
             rental.state = 'COLLECTED'
         else:
@@ -361,6 +382,10 @@ def rental_action(user, data):
             rental.state = 'RETURNED'
             if rental.deposit_status == 'RECORDED_MANUAL':
                 rental.deposit_status = 'REFUND_PENDING'
+            if rental.deposit_status == 'PAID_DEMO':
+                from .operations import refund_demo
+                refund_demo(rental=rental,amount=rental.deposit_ngwee)
+                rental.deposit_status = 'REFUNDED_DEMO'
     rental.save()
     audit(user, f'rental:{rental.pk}', 'rental_'+str(op), state=rental.state, deposit_status=rental.deposit_status,
            condition=rental.return_condition, reference=rental.deposit_reference)
@@ -387,7 +412,7 @@ def save_listing(user, data):
     return {'listing_id': listing.pk}
 
 def payment(user, data):
-    role(user, 'admin')
+    role(user, 'system-owner')
     order = Order.objects.select_for_update().get(pk=get_order(user, integer(data.get('id'), 'Order')).pk)
     reference = text(data.get('reference'), 'Manual payment / refund reference', 120)
     op = data.get('operation', 'record')
@@ -407,7 +432,7 @@ def message(user, data):
     return {'message': 'Message saved to the order thread.'}
 
 def verify(user, data):
-    role(user, 'admin')
+    role(user, 'system-owner')
     try:
         profile = Profile.objects.select_for_update().get(user_id=integer(data.get('id'), 'Account'))
     except Profile.DoesNotExist:
@@ -420,7 +445,7 @@ def verify(user, data):
     return {'message': 'Account verification updated.'}
 
 def account(user, data):
-    role(user, 'admin')
+    role(user, 'system-owner')
     username = text(data.get('username'), 'Username', 80)
     ensure(re.fullmatch(r'[a-zA-Z0-9_]+', username), 'Use letters, numbers and underscores.')
     ensure(not User.objects.filter(username=username).exists(), 'Username already exists.')
@@ -437,10 +462,15 @@ def account(user, data):
 
 @transaction.atomic
 def dispatch(user, action, data, files=()):
+    from . import operations
     handlers = {'cart': add_cart, 'checkout': checkout, 'quote-request': request_quote, 'quote': quote_action,
                 'supplier-order': supplier_order, 'accept-job': accept_job, 'delivery': delivery_update,
                 'rental-book': book_rental, 'rental': rental_action, 'listing': save_listing,
-                'payment': payment, 'message': message, 'verify': verify, 'account': account}
+                'payment': payment, 'message': message, 'verify': verify, 'account': account,
+                'estimate':operations.estimate,'terms':operations.terms,
+                'payment-start':operations.payment_start,'payment-decide':operations.payment_decide,
+                'support-open':operations.open_ticket,'support-reply':operations.support_reply,
+                'location':operations.location_update,'supplier-refund':operations.supplier_refund}
     if action == 'receipt':
         return reconcile(user, data, list(files))
     if action == 'rental-availability':

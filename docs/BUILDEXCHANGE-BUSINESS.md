@@ -8,7 +8,7 @@ Focus first on small building contractors and site owners who need to reconcile 
 
 General equipment rentals add timed availability, deposit bookkeeping and an inspected return record. Equipment includes generators, pumps and power tools, not only construction machinery. The aim is to reduce coordination and evidence gaps across procurement, transport and site inspection. This is a workflow hypothesis, not a verified claim that competing services lack these functions. Do not claim superiority over Yango without a current, documented competitor study.
 
-Proposed revenue experiments: a transparent fee on completed procurement orders, equipment booking fees, and optional contractor record-management subscriptions. Negotiate transport separately during the pilot. No commission engine, subscription billing or platform profit calculation is implemented. Validate willingness to pay and support costs before choosing rates.
+Proposed revenue experiments: a transparent fee on completed procurement orders, equipment booking fees, and optional contractor record-management subscriptions. Negotiate transport separately during the pilot. The prototype now demonstrates a 5% service-fee calculation; that is an illustrative rate, not validated revenue. Subscription billing and commercial profit calculation remain unimplemented. Validate willingness to pay and support costs before choosing rates.
 
 ## 2. Go-to-market and sales
 

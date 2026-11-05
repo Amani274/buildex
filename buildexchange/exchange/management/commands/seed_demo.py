@@ -18,8 +18,11 @@ class Command(BaseCommand):
             user, created = User.objects.get_or_create(username=username)
             if created:
                 user.set_password(password)
-                user.is_staff = user.is_superuser = role == 'admin'
+                user.is_staff = user.is_superuser = False
                 user.save()
+            if role == 'admin' and (user.is_staff or user.is_superuser):
+                user.is_staff = user.is_superuser = False
+                user.save(update_fields=['is_staff','is_superuser'])
             Profile.objects.get_or_create(user=user, defaults={'role': role, 'verified': True,
                 'business_name': {'supplier': 'Demo Lusaka Materials', 'supplier2': 'Demo Equipment Hub'}.get(username, '')})
         if not Listing.objects.exists():

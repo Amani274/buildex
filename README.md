@@ -1,44 +1,47 @@
-# BuildExchange ZM — functional local student demo
+# BuildExchange ZM — From yard to site.
 
-Construction procurement, general equipment rentals and site delivery reconciliation. Open `BuildExchange-ZM.code-workspace` in VS Code, or use **Start BuildExchange.cmd** on Windows.
+A functional local construction procurement, general equipment rental, bank-payment simulation and delivery/site-receipt prototype. Open **BuildExchange-ZM.code-workspace** in VS Code or double-click **Start BuildExchange.cmd** on Windows. The application runs at http://127.0.0.1:8000/.
 
-The new application is in **buildexchange/**: Python, Django, Django REST Framework, PostgreSQL configuration and a tested SQLite demo option. Existing local Yebbo TypeScript/Express/React/Expo source is preserved alongside it; it is a separate grocery-marketplace application with separate data.
+## What works
 
-## Run locally
+- Six research-based Zambian storefronts and 37 sourced/sample catalogue entries, category/search filters, original product illustrations and full-catalogue/source links. Public price snapshots are distinguished from demo prices, stock and sample variants.
+- Multi-supplier basket, map-selected site pin, server-calculated delivery/labour/platform fee breakdown, per-supplier checkout and quotations.
+- Local bank simulator with illustrative bank options, fictitious account balances, approval/decline/cancel/retry, transaction receipts, duplicate-payment protection and simulated refunds. No real bank credentials or money transfers.
+- Supplier order preparation; third-party driver job claims, pickup/arrival controls, opt-in device GPS and a clearly labelled moving-vehicle rehearsal. Recipient tracking refreshes while its map is open.
+- Assigned supervisor quantity/condition reconciliation, discrepancies, private optional photo evidence and printable site receipts. Arrival and payment remain separate from receiving.
+- Separate equipment rentals: availability/time ranges, rental-plus-deposit demo payment, collection, inspected return and deposit-only refund; an uncollected paid cancellation returns the full simulated charge.
+- Customer-support-only admin workspace: submitted cases and responses. No buying, dispatching, catalogue editing, banking, account-provisioning or unrelated-order access for support.
+- Soft navy/blue/amber visual theme, original logo and hero, feedback/loading states, reduced-motion handling and responsive layouts. Prototype terms and location/fee/source explanations are available in the application.
 
-From `buildexchange/`:
+## Start locally
+
+Python 3.13 recommended. The Windows launcher creates the environment through system pip (avoiding this PC's ensurepip issue), applies migrations, then runs seed_demo and seed_marketplace without resetting existing records. Internet is needed for initial dependency setup and map backgrounds.
+
+Manual setup, from buildexchange/:
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+python -m venv --without-pip .venv
+python -m pip --python .venv/Scripts/python.exe install -r requirements.txt
 .venv\Scripts\python.exe manage.py migrate
 .venv\Scripts\python.exe manage.py seed_demo
+.venv\Scripts\python.exe manage.py seed_marketplace
 .venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
 ```
 
-Open http://127.0.0.1:8000/. Accounts: `buyer`, `supplier`, `supplier2`, `driver`, `supervisor`, `admin`. Default fictional demo password: `BuildDemo2026!`. Use Python 3.13. See [full setup and demo script](docs/BUILDEXCHANGE-DEMO.md), including pip bootstrap recovery and PostgreSQL configuration. Seeding is repeatable without resetting records.
+Buyer: **buyer**. Suppliers: **chilanga**, **builders**, **micmar**, **lamasat**, **handymans**, **camco**. Transporter: **driver**. Site receiving: **supervisor**. Customer support: **admin**. Independent demo rental owners: supplier / supplier2. Default demo password: **BuildDemo2026!** (unless changed or set through DEMO_PASSWORD when first created). The login page provides role-selection buttons.
 
-## Working features
+## Guides and evidence
 
-- Verified role workspaces; administrator account provisioning, verification and suspension.
-- Supplier-owned construction material/equipment sale listings and general equipment rentals.
-- Multi-supplier cart, per-supplier checkout, atomic stock reservations and negotiated quotations.
-- Manual payment and refund records with references; no money moves.
-- Third-party transporter job acceptance, pickup/status checkpoints and optional consented/demo coordinates.
-- Assigned site supervisor inspects every ordered line, records quantity/condition/shortages and signs one timestamped receipt.
-- Protected optional photo evidence, printable receipts, order communications and actor/time event history.
-- Time-range rental availability, booking, separate deposit record, collection, inspected return and manual refund bookkeeping.
+- [Current workflow and demonstration guide](docs/BUILDEXCHANGE-V2-GUIDE.md)
+- [Current validation and known limits](docs/BUILDEXCHANGE-V2-VALIDATION.md)
+- [Supplier catalogue, pricing and hours sources](docs/BUILDEXCHANGE-SUPPLIER-SOURCES.md)
+- [Brand descriptions, artwork and map licensing](docs/BUILDEXCHANGE-BRAND-ASSETS.md)
+- [Business differentiation, sales, value and investors](docs/BUILDEXCHANGE-BUSINESS.md)
+- [Blueprint inspection and attributions](docs/BUILDEXCHANGE-BLUEPRINTS.md)
+- [Merge-later guidance](docs/BUILDEXCHANGE-MERGE-LATER.md)
 
-## Project evidence and handoff
+Run checks from buildexchange/: `.venv\Scripts\python.exe manage.py test exchange`, `manage.py check`, and `manage.py makemigrations --check --dry-run`.
 
-- [Architecture, source provenance and permission boundaries](docs/BUILDEXCHANGE-ARCHITECTURE.md)
-- [Executed validation and limitations](docs/BUILDEXCHANGE-VALIDATION.md)
-- [Blueprint inspection, security review and attributions](docs/BUILDEXCHANGE-BLUEPRINTS.md)
-- [Four business questions](docs/BUILDEXCHANGE-BUSINESS.md)
-- [API operations](docs/BUILDEXCHANGE-API.md)
-- [Remaining work and team completion map](docs/BUILDEXCHANGE-REMAINING.md)
-- [Proposed draft PR description](docs/BUILDEXCHANGE-DRAFT-PR.md)
+The Django/DRF application lives in buildexchange/. PostgreSQL configuration remains available in .env.example; SQLite is the verified local option. The previous Yebbo TypeScript/Express/React/Expo application is preserved separately alongside it, with its own database and launcher. The original checkout and main branch remain unchanged. Work stays on feature/buildexchange-zm; no remote push or Render deployment is claimed.
 
-Local branch: `feature/buildexchange-zm`, based on the verified local yebbo history. The original/default branch and original checkout are unchanged. GitHub access for `moonxight/yebbo` returned 404 through the connected `tap310` account, so remote state/push rights remain unverified and no PR was opened. The inherited local Yebbo application was uncommitted work; it is preserved in this separate copy and identified in the provenance notes.
-
-This is a local classroom demo. No live payment gateway, automated GPS, mobile-store build, production hosting, commercial traction or dispute adjudication is claimed. PostgreSQL runtime/concurrency validation and pilot operational/privacy work remain. All sample prices and names are fictional.
+Phone GPS is implemented but physical-phone operation requires a reachable HTTPS address and explicit permission; ordinary phone-to-PC insecure LAN HTTP is insufficient. Demo movement is available for local presentations. OpenFreeMap backgrounds require internet/WebGL and have no service availability guarantee. Pins, stock, dispatch estimates, fees and most prices are demonstration assumptions. The named businesses and banks are not partners or integrations. This is a local prototype, not a commercial service.

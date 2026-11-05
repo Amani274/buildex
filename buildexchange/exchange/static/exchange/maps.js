@@ -1,0 +1,19 @@
+'use strict';
+window.BXMaps=(()=>{
+ const maps=new Map(),swap=p=>[p[1],p[0]];
+ const truck='<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true"><path d="M4 11h20v18H4Zm20 7h7l6 7v4H24Z" fill="#ffb638" stroke="#073b5c" stroke-width="2"/><path d="M27 20h3l4 5h-7Z" fill="#d7eefc"/><circle cx="11" cy="30" r="4" fill="#073b5c"/><circle cx="30" cy="30" r="4" fill="#073b5c"/></svg>';
+ function marker(map,position,kind,label){const el=document.createElement('div');el.className='bx-map-marker '+kind;el.style.width=kind==='vehicle'?'42px':'34px';el.style.height=kind==='vehicle'?'42px':'34px';el.innerHTML=kind==='vehicle'?truck:kind==='site'?'⌂':'▤';el.title=label;el.setAttribute('aria-label',label);return new maplibregl.Marker({element:el}).setLngLat(swap(position)).addTo(map);}
+ async function base(id,center){const el=document.getElementById(id);if(!el)return null;await window.mapReady;if(document.getElementById(id)!==el||maps.has(id))return null;if(!window.maplibregl){el.textContent='The map could not load. Refresh when connected.';return null;}let map;
+  try{map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/positron',center:swap(center),zoom:12,dragRotate:false,pitchWithRotate:false,scrollZoom:false,attributionControl:false});}
+  catch{el.textContent='This browser could not create the map. Try a WebGL-enabled browser.';return null;}
+  map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
+  map.addControl(new maplibregl.AttributionControl({compact:false}),'bottom-right');
+  map.touchZoomRotate.disableRotation();map.on('error',()=>{const note=el.parentElement.querySelector('.map-network');if(note)note.textContent='Map network error. Your last confirmed position is retained; refresh when connected.';});maps.set(id,{map});return map;
+ }
+ async function picker(id,position,onChange){const map=await base(id,position);if(!map)return;const pin=marker(map,position,'site','Your site');map.on('click',e=>{pin.setLngLat(e.lngLat);onChange(e.lngLat.lat,e.lngLat.lng);});}
+ function line(points){return {type:'Feature',properties:{},geometry:{type:'LineString',coordinates:points.map(swap)}};}
+ async function track(id,order){const start=order.origin,dest=[order.latitude,order.longitude],map=await base(id,dest);if(!map)return;const item=maps.get(id);item.orderId=order.id;item.order=order;marker(map,start,'store',order.supplier_name+' · approximate pickup area');marker(map,dest,'site','Site destination');map.fitBounds(new maplibregl.LngLatBounds().extend(swap(start)).extend(swap(dest)),{padding:55,maxZoom:14,duration:0});map.on('load',()=>{if(!maps.has(id))return;map.addSource('connection',{type:'geojson',data:line([start,dest])});map.addLayer({id:'connection',type:'line',source:'connection',paint:{'line-color':'#6e96b4','line-width':3,'line-dasharray':[3,3]}});map.addSource('trace',{type:'geojson',data:{type:'FeatureCollection',features:[]}});map.addLayer({id:'trace',type:'line',source:'trace',paint:{'line-color':'#087bb5','line-width':4}});update(item.order);});update(order);}
+ function update(order){const points=(order.delivery?.checkpoints||[]).filter(c=>c.latitude!==null),latest=points.at(-1);for(const item of maps.values()){if(item.orderId!==order.id)continue;item.order=order;item.map.getContainer().dataset.locationSource=latest?.source||'none';const position=latest?[latest.latitude,latest.longitude]:order.origin;if(item.vehicle)item.vehicle.setLngLat(swap(position));else item.vehicle=marker(item.map,position,'vehicle',latest?.source==='demo'?'Simulated vehicle position':latest?.source==='consented-gps'?'Consented device position':'Pickup area · no shared location yet');const source=item.map.getSource('trace');if(source&&points.length>1)source.setData(line(points.map(c=>[c.latitude,c.longitude])));}}
+ function clear(){for(const {map} of maps.values())map.remove();maps.clear();}
+ return {picker,track,update,clear};
+})();

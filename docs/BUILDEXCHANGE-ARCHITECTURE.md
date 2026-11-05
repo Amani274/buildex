@@ -1,3 +1,5 @@
+> Historical v1 document. The current operational prototype is described in [BUILDEXCHANGE-V2-GUIDE.md](BUILDEXCHANGE-V2-GUIDE.md), with current roles, bank simulation, fees, maps and validation.
+
 # Architecture and boundaries
 
 The source checkout on this PC identifies `https://github.com/moonxight/yebbo.git` as origin. Its local main HEAD was `6d7bb311dc01c5241b64887adda7077a34c66072`. The local TypeScript/Express/React/Expo application files were uncommitted additions on top of that planning-era history. They have been preserved in this isolated copy. The original checkout was not modified.

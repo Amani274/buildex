@@ -1,3 +1,5 @@
+> Historical v1 document. The current operational prototype is described in [BUILDEXCHANGE-V2-GUIDE.md](BUILDEXCHANGE-V2-GUIDE.md), with current roles, bank simulation, fees, maps and validation.
+
 # Completion map for classmates
 
 Implemented and tested locally: role verification, supplier-owned sale/rental listings, quote negotiation, multi-supplier cart checkout, stock reservations, per-supplier orders, manual payment/refund records, transporter job claims and checkpoints, explicit location consent/source labels, supervisor-only line reconciliation, discrepancy receipts, private photo evidence, printable receipts, rental availability/bookings/deposits/collection/returns/refunds, order messages and read-only audit history.

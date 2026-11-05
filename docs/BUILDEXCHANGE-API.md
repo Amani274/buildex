@@ -1,3 +1,5 @@
+> Historical v1 document. The current operational prototype is described in [BUILDEXCHANGE-V2-GUIDE.md](BUILDEXCHANGE-V2-GUIDE.md), with current roles, bank simulation, fees, maps and validation.
+
 # API reference
 
 Session-authenticated, same-origin JSON API. Sign in through `/login/`; `GET /` sets the CSRF cookie. Send `X-CSRFToken` on every POST. All actions reject unverified accounts. IDs are integers, quantities are whole units, money is integer ngwee (100 ngwee = ZMW 1), date-times accept ISO 8601 and use Africa/Lusaka for naive values. Prefer explicit offsets.

@@ -1,3 +1,5 @@
+> Historical v1 document. The current operational prototype is described in [BUILDEXCHANGE-V2-GUIDE.md](BUILDEXCHANGE-V2-GUIDE.md), with current roles, bank simulation, fees, maps and validation.
+
 # Classroom demo and local run
 
 Open `BuildExchange-ZM.code-workspace` in VS Code. Open a terminal in `buildexchange/`.

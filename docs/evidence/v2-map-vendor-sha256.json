@@ -1,0 +1,11 @@
+{
+  "buildexchange/exchange/static/exchange/vendor/leaflet/leaflet.css": "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6",
+  "buildexchange/exchange/static/exchange/vendor/leaflet/leaflet.js": "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a",
+  "buildexchange/exchange/static/exchange/vendor/leaflet/LICENSE": "53e8dc25862014e4324741ca18fbe3611e11d42ef69f59f86ea8c5389647d4cb",
+  "buildexchange/exchange/static/exchange/vendor/maplibre/LICENSE.txt": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+  "buildexchange/exchange/static/exchange/vendor/maplibre/maplibre-gl-shared.mjs": "fcf4d81450df235da0aea74897cc23926774b5228d38ae1de6a7d701c5905785",
+  "buildexchange/exchange/static/exchange/vendor/maplibre/maplibre-gl-worker.mjs": "ce4957017fe705ac2f9ebef206cca966d08d8621756c39326a78cf09757e7d75",
+  "buildexchange/exchange/static/exchange/vendor/maplibre/maplibre-gl.css": "8e2dbbab312dc57656fbb76e9fa5308c75c9d7c7ba5808a7d55bcdb64cc813fa",
+  "buildexchange/exchange/static/exchange/vendor/maplibre/maplibre-gl.mjs": "97e8b9a39ab8b823d6a0caf9c312237262bc9138a6162d9e29606f5f8d24127d",
+  "buildexchange/exchange/static/exchange/vendor/maplibre/package.json": "bfa4732f7425ed297b0fd1826caead0141ab73491e357c16d0544f1b283dd2f7"
+}

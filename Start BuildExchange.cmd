@@ -15,6 +15,8 @@ if errorlevel 1 (
 if errorlevel 1 goto fail
 .venv\Scripts\python.exe manage.py seed_demo
 if errorlevel 1 goto fail
+.venv\Scripts\python.exe manage.py seed_marketplace
+if errorlevel 1 goto fail
 echo Open http://127.0.0.1:8000 after the server starts. Press Ctrl+C to stop.
 .venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
 exit /b
