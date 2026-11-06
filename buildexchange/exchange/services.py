@@ -78,7 +78,7 @@ def add_cart(user, data):
         CartItem.objects.filter(purchaser=user, listing=item).delete()
     return {'message': 'Cart updated.'}
 
-def reserve_order(user, supplier, supervisor, site, items, quote=None, destination=None):
+def reserve_order(user, supplier, supervisor, site, items, quote=None, destination=None, source='map-pin'):
     from .operations import fee_quote
     order = Order.objects.create(purchaser=user, supplier=supplier, supervisor_id=supervisor, site=site, quote=quote)
     for listing, qty, price in items:
@@ -90,7 +90,7 @@ def reserve_order(user, supplier, supervisor, site, items, quote=None, destinati
     for key,value in fee_quote(supplier,items,dest).items():
         setattr(order,key,value)
     order.site_latitude,order.site_longitude=dest
-    order.location_source='map-pin' if destination else 'demo-default'
+    order.location_source=source if destination else 'demo-default'
     order.save()
     audit(user, f'order:{order.pk}', 'order_placed', total_ngwee=order.total_ngwee, quote_id=quote.pk if quote else None)
     return order
@@ -117,7 +117,8 @@ def checkout(user, data):
         listing = listing_for_sale(line.listing_id)
         ensure(listing.stock >= line.quantity, f'Insufficient stock: {listing.name}.')
         groups[listing.supplier_id].append((listing, line.quantity, listing.price_ngwee))
-    ids = [reserve_order(user, User.objects.get(pk=supplier), supervisor, site, items,destination=destination).pk for supplier, items in groups.items()]
+    source = 'device-location' if data.get('location_source') == 'device-location' else 'map-pin'
+    ids = [reserve_order(user, User.objects.get(pk=supplier), supervisor, site, items,destination=destination,source=source).pk for supplier, items in groups.items()]
     Checkout.objects.create(purchaser=user, key=key, fingerprint=fingerprint, order_ids=ids)
     CartItem.objects.filter(purchaser=user).delete()
     return {'order_ids': ids}
@@ -470,7 +471,8 @@ def dispatch(user, action, data, files=()):
                 'estimate':operations.estimate,'terms':operations.terms,
                 'payment-start':operations.payment_start,'payment-decide':operations.payment_decide,
                 'support-open':operations.open_ticket,'support-reply':operations.support_reply,
-                'location':operations.location_update,'supplier-refund':operations.supplier_refund}
+                'location':operations.location_update,'supplier-refund':operations.supplier_refund,
+                'order-cancel':operations.order_cancel,'support-fix':operations.support_fix}
     if action == 'receipt':
         return reconcile(user, data, list(files))
     if action == 'rental-availability':

@@ -10,3 +10,12 @@
 .hero>img{object-position:center 76%}.login-visual>img{object-position:center 72%}.product-visual img{object-fit:contain;padding:12px}.photo-credit{display:block;font-size:10px;color:#627888;margin:3px 0 7px}.product-visual{background:#edf2f6}
 
 .sidebar-bottom>a{display:block;margin:7px 0}
+
+/* Current location, cancel order and support repairs */
+.location-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 2px}.location-row small{color:#56788e;font-size:12px;flex:1 1 200px}.location-row button{font-size:12px;padding:8px 14px}
+.cancel-details{margin-top:10px;font-size:12px}.cancel-details summary{cursor:pointer;color:#56788e}.cancel-details form{margin-top:8px}.cancel-details small{display:block;color:#677d8c;margin-top:6px}
+.case-context{display:grid;gap:3px;background:#edf5fa;border-radius:8px;padding:10px 13px;font-size:12px;color:#456a82;margin:10px 0}
+.fix-panel{margin:12px 0;border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#f8fbfd}.fix-panel>summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.fix-block{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.fix-block>strong{display:block;color:var(--navy)}.fix-block>small{display:block;color:#677d8c;margin:2px 0 8px}
+
+.fix-form button.primary{background:#fff;color:var(--navy);border:1px solid #9fb8c9;box-shadow:none;font-size:12px;padding:9px 16px}.fix-form button.primary:hover{background:#edf5fa}

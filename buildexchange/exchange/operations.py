@@ -2,11 +2,11 @@
 import hashlib
 import math
 from datetime import timedelta
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound
 from .models import (Storefront, Order, PaymentAttempt, Rental, Event, SupportTicket, TermsAcceptance,
-                     CartItem, Listing, Delivery, Checkpoint,DemoBankAccount)
+                     CartItem, Listing, Delivery, Checkpoint,DemoBankAccount,Message)
 from .services import ensure, role, integer, text, audit
 
 TERMS_VERSION = 'prototype-2026-11-v2'
@@ -97,6 +97,8 @@ def payment_start(user, data):
         except Rental.DoesNotExist:raise NotFound('Your rental was not found.')
         ensure(record.state=='BOOKED' and record.payment_status=='PENDING','No rental payment is due.')
         amount=record.total_ngwee+record.deposit_ngwee
+    # A bank session older than 15 minutes can no longer be approved, so retire it instead of trapping the buyer in it.
+    PaymentAttempt.objects.filter(purchaser=user,state='PENDING',created_at__lt=timezone.now()-timedelta(minutes=15),**{target:record}).update(state='CANCELLED',completed_at=timezone.now())
     pending=PaymentAttempt.objects.filter(purchaser=user,state='PENDING',**{target:record}).first()
     if pending:
         return {'attempt_id':pending.pk,'url':f'/bank-sandbox/{pending.pk}/','replayed':True}
@@ -142,12 +144,78 @@ def payment_decide(user,data):
 
 def open_ticket(user,data):
     from .services import get_order
-    role(user,'purchaser','supplier','transporter','supervisor')
-    order=get_order(user,integer(data.get('id'),'Order'))
+    role(user,'purchaser','supplier','transporter','supervisor','admin')
+    pk=integer(data.get('id'),'Order')
+    if user.profile.role=='admin':
+        # Support can open a case from an order number (for example a buyer who phones in); the case then brings the order into its desk.
+        try:order=Order.objects.get(pk=pk)
+        except Order.DoesNotExist:raise NotFound('No order with that number.')
+    else:order=get_order(user,pk)
     ticket=SupportTicket.objects.create(order=order,opened_by=user,subject=text(data.get('subject'),'Subject',120),
                                         description=text(data.get('description'),'Issue',1500))
-    audit(user,f'order:{order.pk}','support_requested',ticket_id=ticket.pk)
-    return {'message':'Support request sent. Your case number is BX-'+str(ticket.pk)}
+    audit(user,f'order:{order.pk}','support_requested',ticket_id=ticket.pk,by_support=user.profile.role=='admin')
+    return {'message':'Case BX-'+str(ticket.pk)+(' opened for order BE-'+str(order.pk) if user.profile.role=='admin' else ' sent to customer support.')}
+
+def cancel_order_record(order,actor,reason,support=False):
+    """Cancel an order that has not been collected: release stock, clear unpaid bank sessions and refund a simulated payment once."""
+    ensure(order.state in (['PLACED','ACCEPTED','READY'] if support else ['PLACED']),
+           'This order can no longer be cancelled here.' if support else 'Orders can be cancelled only until the supplier accepts them.')
+    job=getattr(order,'delivery',None)
+    ensure(job is None or (job.transporter_id is None and job.state=='OPEN'),'A driver has already accepted this delivery.')
+    ensure(order.payment_status!='RECORDED_MANUAL','This order has a manually recorded payment that must be settled outside the demo bank.')
+    for line in order.lines.order_by('listing_id'):
+        Listing.objects.filter(pk=line.listing_id).update(stock=F('stock')+line.quantity)
+    PaymentAttempt.objects.filter(order=order,state='PENDING').update(state='CANCELLED',completed_at=timezone.now())
+    refunded=order.payment_status=='PAID_DEMO'
+    if refunded:
+        refund_demo(order=order);order.payment_status='REFUNDED_DEMO'
+    elif order.payment_status=='PENDING':order.payment_status='VOIDED'
+    if job:
+        job.state='CANCELLED';job.save(update_fields=['state'])
+    order.state='CANCELLED';order.save()
+    audit(actor,f'order:{order.pk}','order_cancelled',reason=reason,by_support=support,refunded=refunded)
+    return refunded
+
+def order_cancel(user,data):
+    from .services import get_order
+    role(user,'purchaser')
+    order=Order.objects.select_for_update().get(pk=get_order(user,integer(data.get('id'),'Order')).pk)
+    ensure(order.purchaser_id==user.pk,'Only the buyer can cancel this order.')
+    refunded=cancel_order_record(order,user,text(data.get('reason',''),'Reason',500,False))
+    return {'message':'Order cancelled and your simulated payment was refunded.' if refunded else 'Order cancelled. Nothing was charged.'}
+
+def support_fix(user,data):
+    """Targeted, audited repairs for orders that have a support case. Support still cannot shop, dispatch, edit prices or manage accounts."""
+    from .services import get_order, supervisor_id
+    role(user,'admin')
+    order=Order.objects.select_for_update().get(pk=get_order(user,integer(data.get('id'),'Order')).pk)
+    op=data.get('operation')
+    ensure(op in ['cancel_order','reset_payment','change_supervisor','update_site'],'Choose a support fix.')
+    reason=text(data.get('reason'),'Reason for the change',500)
+    live=order.state not in ['CANCELLED','REJECTED','RECEIVED','DISPUTED']
+    if op=='cancel_order':
+        refunded=cancel_order_record(order,user,reason,support=True)
+        note='cancelled this order'+(' and refunded the simulated payment.' if refunded else '. Nothing was charged.')
+        result='Order cancelled'+(' and the simulated payment refunded.' if refunded else '.')
+    elif op=='reset_payment':
+        ensure(live and order.payment_status=='PENDING','There is no unpaid bank session to clear.')
+        cleared=PaymentAttempt.objects.filter(order=order,state='PENDING').update(state='CANCELLED',completed_at=timezone.now())
+        note='cleared the stuck bank session. You can choose Pay by bank again.'
+        result='Bank session cleared. The buyer can start the payment again.' if cleared else 'No open bank session was found; the buyer can already pay again.'
+    elif op=='change_supervisor':
+        ensure(live and not hasattr(order,'receipt'),'The receiving supervisor can no longer be changed.')
+        new=supervisor_id(integer(data.get('supervisor'),'Supervisor'))
+        order.supervisor_id=new;order.save(update_fields=['supervisor'])
+        note='changed who receives this delivery on site.'
+        result='Receiving supervisor changed.'
+    else:
+        ensure(live and not hasattr(order,'receipt'),'The site details can no longer be changed.')
+        order.site=text(data.get('site'),'Site address / landmark',240);order.save(update_fields=['site'])
+        note='corrected the site address or landmark. The map pin is unchanged.'
+        result='Site details updated.'
+    Message.objects.create(order=order,author=user,text='Customer support '+note+' Reason: '+reason)
+    audit(user,f'order:{order.pk}','support_fix',operation=op,reason=reason)
+    return {'message':result}
 
 def support_reply(user,data):
     role(user,'admin')

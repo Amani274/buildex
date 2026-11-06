@@ -388,3 +388,99 @@ class WorkflowTests(TestCase):
         self.assertNotIn('audit',data);self.assertNotIn('events',data['orders'][0])
         response=self.client.post('/api/action/cart/',[],format='json')
         self.assertEqual(response.status_code,400)
+
+    # --- Buyer cancellation, support repairs and device location ---
+    def unpaid_order(self, qty=10, key='unpaid-checkout-key-1'):
+        self.post('buyer','cart',{'listing':self.cement.pk,'quantity':qty})
+        ids=self.post('buyer','checkout',{'key':key,'site':'Demo site, Lusaka landmark B','supervisor':self.users['supervisor'].pk})['order_ids']
+        return Order.objects.get(pk=ids[0])
+    def balance(self):
+        from .models import DemoBankAccount
+        return DemoBankAccount.objects.get(user=self.users['buyer'],bank_label='Absa · simulation').balance_ngwee
+    def open_case(self, order):
+        self.post('buyer','support-open',{'id':order.pk,'subject':'Need help','description':'Please help with this demo order'})
+
+    def test_buyer_cancels_unpaid_order_and_stock_returns(self):
+        before=Listing.objects.get(pk=self.cement.pk).stock
+        o=self.unpaid_order();self.assertEqual(Listing.objects.get(pk=self.cement.pk).stock,before-10)
+        self.post('supplier','order-cancel',{'id':o.pk},403)
+        self.post('buyer','order-cancel',{'id':o.pk,'reason':'Wrong quantity'})
+        o.refresh_from_db();self.assertEqual((o.state,o.payment_status),('CANCELLED','VOIDED'))
+        self.assertEqual(Listing.objects.get(pk=self.cement.pk).stock,before)
+        self.post('buyer','order-cancel',{'id':o.pk},400)
+        self.post('buyer','terms',{'accept':True})
+        self.post('buyer','payment-start',{'id':o.pk,'target':'order','bank':'absa-demo','key':uuid.uuid4().hex},400)
+
+    def test_buyer_cancel_after_payment_refunds_once_and_stops_when_supplier_accepts(self):
+        o=self.unpaid_order();self.pay_demo('buyer','order',o.pk);paid=self.balance()
+        self.post('buyer','order-cancel',{'id':o.pk})
+        o.refresh_from_db();self.assertEqual((o.state,o.payment_status),('CANCELLED','REFUNDED_DEMO'))
+        self.assertEqual(self.balance(),paid+o.total_ngwee)
+        self.post('buyer','order-cancel',{'id':o.pk},400);self.assertEqual(self.balance(),paid+o.total_ngwee)
+        second=self.new_order(key='accepted-checkout-key-1')
+        self.post('supplier','supplier-order',{'id':second.pk,'operation':'ACCEPTED'})
+        self.post('buyer','order-cancel',{'id':second.pk},400)
+
+    def test_support_repairs_require_a_case_and_leave_other_powers_denied(self):
+        o=self.unpaid_order()
+        self.post('admin','support-fix',{'id':o.pk,'operation':'reset_payment','reason':'Stuck'},404)
+        self.post('buyer','support-fix',{'id':o.pk,'operation':'reset_payment','reason':'Stuck'},403)
+        self.open_case(o)
+        self.post('admin','support-fix',{'id':o.pk,'operation':'reset_payment'},400)
+        self.post('admin','support-fix',{'id':o.pk,'operation':'delete_everything','reason':'x'},400)
+        self.post('admin','payment',{'id':o.pk,'reference':'x'},403);self.post('admin','cart',{'listing':self.cement.pk,'quantity':1},403)
+
+    def test_support_clears_stuck_payment_changes_supervisor_and_site(self):
+        from .models import PaymentAttempt
+        o=self.unpaid_order();self.open_case(o)
+        self.post('buyer','terms',{'accept':True})
+        attempt=self.post('buyer','payment-start',{'id':o.pk,'target':'order','bank':'absa-demo','key':uuid.uuid4().hex})
+        self.post('admin','support-fix',{'id':o.pk,'operation':'reset_payment','reason':'Bank page stuck'})
+        self.assertEqual(PaymentAttempt.objects.get(pk=attempt['attempt_id']).state,'CANCELLED')
+        self.post('buyer','payment-start',{'id':o.pk,'target':'order','bank':'absa-demo','key':uuid.uuid4().hex})
+        self.post('admin','support-fix',{'id':o.pk,'operation':'change_supervisor','supervisor':self.users['supervisor2'].pk,'reason':'Wrong person named'})
+        self.post('admin','support-fix',{'id':o.pk,'operation':'update_site','site':'Plot 12, near the school','reason':'Landmark typo'})
+        o.refresh_from_db();self.assertEqual(o.supervisor_id,self.users['supervisor2'].pk);self.assertEqual(o.site,'Plot 12, near the school')
+        self.post('admin','support-fix',{'id':o.pk,'operation':'update_site','site':'x'},400)
+        self.assertEqual(o.messages.filter(author=self.users['admin'],text__startswith='Customer support').count(),3)
+        self.assertEqual(Event.objects.filter(action='support_fix',target=f'order:{o.pk}').count(),3)
+
+    def test_support_cancels_ready_paid_order_and_removes_the_job(self):
+        o=self.new_order();self.ready(o);self.open_case(o);paid=self.balance();stock=Listing.objects.get(pk=self.cement.pk).stock
+        self.client.force_authenticate(user=self.users['driver']);self.assertEqual(len(self.client.get('/api/state/').json()['jobs']),1)
+        self.post('admin','support-fix',{'id':o.pk,'operation':'cancel_order','reason':'Supplier out of stock on site'})
+        o.refresh_from_db();self.assertEqual((o.state,o.payment_status,o.delivery.state),('CANCELLED','REFUNDED_DEMO','CANCELLED'))
+        self.assertEqual(self.balance(),paid+o.total_ngwee);self.assertEqual(Listing.objects.get(pk=self.cement.pk).stock,stock+10)
+        self.client.force_authenticate(user=self.users['driver']);self.assertEqual(self.client.get('/api/state/').json()['jobs'],[])
+        self.post('admin','support-fix',{'id':o.pk,'operation':'cancel_order','reason':'again'},400)
+
+    def test_support_cannot_cancel_once_a_driver_has_the_job(self):
+        o=self.new_order();job=self.ready(o);self.post('driver','accept-job',{'id':job.pk});self.open_case(o)
+        self.post('admin','support-fix',{'id':o.pk,'operation':'cancel_order','reason':'Too late'},400)
+
+    def test_support_can_open_a_case_from_an_order_number(self):
+        o=self.unpaid_order()
+        self.post('admin','support-open',{'id':99999,'subject':'x','description':'y'},404)
+        self.post('admin','support-open',{'id':o.pk,'subject':'Buyer phoned in','description':'Cannot pay'})
+        self.client.force_authenticate(user=self.users['admin']);data=self.client.get('/api/state/').json()
+        self.assertEqual(len(data['tickets']),1);self.assertEqual(data['orders'][0]['payment_status'],'PENDING')
+        self.assertNotIn('total_ngwee',data['orders'][0]);self.assertNotIn('payment_reference',data['orders'][0])
+
+    def test_expired_bank_session_is_retired_when_the_buyer_retries(self):
+        from .models import PaymentAttempt
+        o=self.unpaid_order();self.post('buyer','terms',{'accept':True})
+        first=self.post('buyer','payment-start',{'id':o.pk,'target':'order','bank':'absa-demo','key':uuid.uuid4().hex})['attempt_id']
+        PaymentAttempt.objects.filter(pk=first).update(created_at=timezone.now()-timedelta(minutes=20))
+        second=self.post('buyer','payment-start',{'id':o.pk,'target':'order','bank':'absa-demo','key':uuid.uuid4().hex})['attempt_id']
+        self.assertNotEqual(first,second);self.assertEqual(PaymentAttempt.objects.get(pk=first).state,'CANCELLED')
+        self.assertEqual(self.post('buyer','payment-decide',{'id':second,'decision':'approve'})['state'],'SUCCEEDED')
+
+    def test_device_location_is_recorded_and_still_validated_to_zambia(self):
+        self.post('buyer','cart',{'listing':self.cement.pk,'quantity':3})
+        base={'site':'My current location','supervisor':self.users['supervisor'].pk,'latitude':-15.43,'longitude':28.31}
+        self.post('buyer','checkout',{**base,'key':'device-location-key-1','latitude':51.5,'longitude':-0.12,'location_source':'device-location'},400)
+        oid=self.post('buyer','checkout',{**base,'key':'device-location-key-2','location_source':'device-location'})['order_ids'][0]
+        self.assertEqual(Order.objects.get(pk=oid).location_source,'device-location')
+        self.post('buyer','cart',{'listing':self.cement.pk,'quantity':2})
+        oid=self.post('buyer','checkout',{**base,'key':'device-location-key-3','location_source':'something-else'})['order_ids'][0]
+        self.assertEqual(Order.objects.get(pk=oid).location_source,'map-pin')

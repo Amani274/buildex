@@ -58,6 +58,8 @@ def serialize_order(o,user):
                        'payment_reference':o.payment_reference,'delivery_ngwee':o.delivery_ngwee,'labour_ngwee':o.labour_ngwee,
                        'commission_ngwee':o.commission_ngwee,'unit_prices':{l.pk:l.unit_price_ngwee for l in o.lines.all()}})
     if r=='transporter':result.update({'delivery_ngwee':o.delivery_ngwee,'labour_ngwee':o.labour_ngwee})
+    # Support sees the payment status (not amounts or references) so it knows whether a refund applies.
+    if r=='admin':result.update({'payment_status':o.payment_status,'has_receipt':receipt is not None})
     return result
 
 @api_view(['GET'])
@@ -80,7 +82,7 @@ def state(request):
                      'name':l.name,'kind':l.kind,'unit':l.unit,'price_ngwee':l.price_ngwee,'stock':l.stock,
                      'deposit_ngwee':l.deposit_ngwee,'category':l.category,'image_key':l.image_key,
                      'source_url':l.source_url,'price_basis':l.price_basis} for l in listings],
-        'supervisors':list(User.objects.filter(profile__role='supervisor',profile__verified=True,is_active=True).values('id','username')) if r=='purchaser' else [],
+        'supervisors':list(User.objects.filter(profile__role='supervisor',profile__verified=True,is_active=True).values('id','username')) if r in ['purchaser','admin'] else [],
         'cart':list(CartItem.objects.filter(purchaser=user).values('listing_id','quantity')) if r=='purchaser' else [],
         'orders':[serialize_order(o,user) for o in orders.order_by('-id')],
         'quotes':[{'id':q.pk,'listing':q.listing.name,'quantity':q.quantity,'purchaser':q.purchaser.username,
