@@ -1,4 +1,6 @@
 Original BuildExchange logo, SVG product illustrations and vehicle-marker artwork: CC0-1.0 dedication, to the extent rights exist.
 https://creativecommons.org/publicdomain/zero/1.0/
-The generated construction-hero-v2.png depicts fictional people and was created for this project; it is offered for project reuse to the extent rights exist. No third-party stock photos or supplier logos are included. No trademark rights or rights in actual persons are granted by this notice.
+The generated construction-hero-v2.png depicts fictional people and was created for this project; it is offered for project reuse to the extent rights exist. Four Wikimedia Commons catalogue photographs are now included under their individual licences; see the credit record below. No supplier logos are included. No trademark rights or rights in actual persons are granted by this notice.
 Map fonts, tiles, libraries and data retain their own licences and required attribution; they are not covered by this artwork dedication.
+
+Photo credits and individual licences: see docs/BUILDEXCHANGE-BRAND-ASSETS.md and the public /image-credits/ page. cement-photo.jpg (KVDP) and wheelbarrow-photo.jpg (Hyena): public domain dedication. drill-photo.jpg (Helar Lukats) and grinder-photo.jpg (Widar23, Bukk): CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0/ . Photographs unchanged; CSS display scaling only. construction-photo.jpeg is user-supplied and NOT covered by CC0 or a claimed public stock licence.

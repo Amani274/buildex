@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth
 from django.urls import path
+from django.views.generic import TemplateView
 from exchange import views
 
 urlpatterns = [
@@ -8,6 +9,7 @@ urlpatterns = [
     path('login/', auth.LoginView.as_view(template_name='exchange/login.html')),
     path('logout/', auth.LogoutView.as_view()),
     path('terms/', views.terms_page),
+    path('image-credits/', TemplateView.as_view(template_name='exchange/image-credits.html')),
     path('bank-sandbox/<int:attempt_id>/', views.bank_sandbox),
     path('api/state/', views.state),
     path('api/tracking/<int:order_id>/', views.tracking),

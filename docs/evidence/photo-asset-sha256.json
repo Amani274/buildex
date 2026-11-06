@@ -1,0 +1,27 @@
+[
+  {
+    "file": "construction-photo.jpeg",
+    "bytes": 1313747,
+    "sha256": "ca76d4801846869d8d081b1fa7c5c10ae38871002f32cd991840b49565cfef6d"
+  },
+  {
+    "file": "cement-photo.jpg",
+    "bytes": 196988,
+    "sha256": "232a449fab39ddd961bf5ffa566c4a66b5b7e32ec112e6ad852fd9f4832be4cf"
+  },
+  {
+    "file": "wheelbarrow-photo.jpg",
+    "bytes": 125193,
+    "sha256": "a85f7e5684e0a7215aea9b43948bfce060ca6f7ab7296a72a8926dbdcda51b9e"
+  },
+  {
+    "file": "drill-photo.jpg",
+    "bytes": 3068767,
+    "sha256": "3d79995ec781e7b908a355aa976a61a7659ad94646cc4a5fac04db7202beffc7"
+  },
+  {
+    "file": "grinder-photo.jpg",
+    "bytes": 82994,
+    "sha256": "06c7c9cdce49c96f782f06fb7ef62205a2c0f3f01fe38380c845b9b54a235d05"
+  }
+]

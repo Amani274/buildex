@@ -5,3 +5,8 @@
 .header-actions form{margin:0}.maplibregl-ctrl-attrib{font-size:8px!important;line-height:1.5!important}.maplibregl-ctrl-attrib a{font-size:8px!important}
 
 #delivery-map[data-location-source="demo"]:after,#delivery-map[data-location-source="consented-gps"]:after{position:absolute;top:12px;right:12px;z-index:5;padding:7px 10px;border-radius:6px;background:#fff1d8;color:#875f1c;font:750 9px/1.4 system-ui;letter-spacing:.7px;pointer-events:none;box-shadow:0 2px 10px #073b5c15}#delivery-map[data-location-source="demo"]:after{content:"DEMO MOVEMENT"}#delivery-map[data-location-source="consented-gps"]:after{content:"CONSENTED DEVICE GPS";background:#e6f4eb;color:#287251}
+
+/* Real photography: preserve full product silhouettes and crop the supplied portrait around its crane. */
+.hero>img{object-position:center 76%}.login-visual>img{object-position:center 72%}.product-visual img{object-fit:contain;padding:12px}.photo-credit{display:block;font-size:10px;color:#627888;margin:3px 0 7px}.product-visual{background:#edf2f6}
+
+.sidebar-bottom>a{display:block;margin:7px 0}
