@@ -1,13 +1,7 @@
 services:
   - type: web
     name: buildexchange
-    runtime: python
-    rootDir: buildexchange
-    buildCommand: bash build.sh
-    startCommand: bash start.sh
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /login/
-    envVars:
-      - key: DEBUG
-        value: "0"
-      - key: SECRET_KEY
-        generateValue: true

@@ -1,0 +1,12 @@
+.git
+.github
+apps
+packages
+scripts
+docs
+node_modules
+**/.venv
+**/__pycache__
+**/*.sqlite3
+buildexchange/private-media
+buildexchange/staticfiles
