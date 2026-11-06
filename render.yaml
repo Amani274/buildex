@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: buildexchange
+    runtime: python
+    rootDir: buildexchange
+    buildCommand: bash build.sh
+    startCommand: bash start.sh
+    healthCheckPath: /login/
+    envVars:
+      - key: DEBUG
+        value: "0"
+      - key: SECRET_KEY
+        generateValue: true
